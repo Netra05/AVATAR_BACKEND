@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import axios from "axios";
 import express from "express";
-import voice from "elevenlabs-node";
+import ElevenLabs from 'elevenlabs-node';
 import path from "path";
 import fs from "fs"; // Standard fs module
 import { promises as fsPromises } from "fs"; // Promises API
@@ -45,18 +45,26 @@ const execCommand = (command) => {
 const lipSyncMessage = async (index) => {
   try {
     const time = Date.now();
-    const mp3File = `audios/message_${index}.mp3`;
-    const wavFile = `audios/message_${index}.wav`;
-    const jsonFile = `audios/message_${index}.json`;
+    const basePath = 'C:\\Users\\NETRA\\Downloads\\back-ai\\back-ai\\audios';
+const ffmpegPath = 'C:\\Users\\NETRA\\Downloads\\back-ai\\back-ai\\bin\\Rhubarb-Lip-Sync-1.13.0-Windows\\ffmpeg-2025-01-05-git-19c95ecbff-essentials_build\\bin\\ffmpeg.exe';
+const rhubarbPath = 'C:\\Users\\NETRA\\Downloads\\back-ai\\back-ai\\bin\\Rhubarb-Lip-Sync-1.13.0-Windows\\Rhubarb-Lip-Sync-1.13.0-Windows\\rhubarb.exe';
+
+    const mp3File = path.join(basePath, `message_${index}.mp3`);
+    console.log("Path of MP3:", mp3File);
+   
+    const wavFile = path.join(basePath, `message_${index}.wav`);
+    console.log("Path of WAV:", wavFile);
+   
+    const jsonFile = path.join(basePath, `message_${index}.json`);
+    console.log("Path of JSON:", jsonFile);
+   
 
     console.log(`Converting ${mp3File} to WAV...`);
-    await execCommand(`ffmpeg -y -i ${mp3File} ${wavFile}`);
-    console.log(`Conversion completed in ${Date.now() - time}ms.`);
-    
+    await execCommand(`"${ffmpegPath}" -y -i "${mp3File}" "${wavFile}"`);
+       
     //hard coded rhubarbPath , Change to your bin location by creating new bin
-    const rhubarbPath = '/home/kirubhakaran-d/r3f-virtual-girlfriend-backend/bin/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb';  // Use the full path
     console.log(`Generating lip-sync data for ${wavFile}...`);
-    await execCommand(`${rhubarbPath} -f json -o ${jsonFile} ${wavFile} -r phonetic`);
+    await execCommand(`"${rhubarbPath}" -f json -o "${jsonFile}" "${wavFile}" -r phonetic`);
     console.log(`Lip-sync generation completed in ${Date.now() - time}ms.`);
   } catch (error) {
     console.error(`Error during lip-sync generation: ${error.message}`);
@@ -184,10 +192,16 @@ app.post("/chat", async (req, res) => {
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       const fileName = `audios/message_${i}.mp3`;
-
+      const elevenLabs = new ElevenLabs({
+        apiKey: process.env.ELEVEN_LABS_API_KEY, // Pass your Eleven Labs API key
+      });
       // Generate audio
-      await voice.textToSpeech(elevenLabsApiKey, voiceID, fileName, message.text);
-
+      await elevenLabs.textToSpeech({
+        voiceId: voiceID,        // Use your voice ID
+        fileName: fileName,      // The name of the output file
+        textInput: message.text, // The text to convert to speech
+      });
+      
       // Generate lipsync
       await lipSyncMessage(i);
 
@@ -206,5 +220,5 @@ app.post("/chat", async (req, res) => {
 
 
 app.listen(port, () => {
-  console.log(`Virtual Girlfriend listening on port ${port}`);
+  console.log(`Pluto listening on port ${port}`);
 });
